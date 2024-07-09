@@ -65,7 +65,7 @@ create_docker_compose() {
   local subnet="172.22.${instance_number}.0/24"
   local head_id=$(cat allora-instances/instance-${instance_number}/head-data/keys/identity)
 
-  cat >allora-instances/instance-${instance_number}/docker-compose.yml <<EOL
+  cat >$HOME/allora-instances/instance-${instance_number}/docker-compose.yml <<EOL
 version: '3'
 
 services:
@@ -192,6 +192,33 @@ volumes:
 EOL
 }
 
+# 生成或恢复钱包
+generate_or_recover_wallet() {
+  local wallet_name=$1
+  local wallet_seed=$2
+
+  if [ -z "$wallet_seed" ]; then
+    # 创建新钱包
+    wallet_info=$(allorad keys add ${wallet_name})
+  else
+    # 使用助记词恢复钱包
+    wallet_info=$(echo "$wallet_seed" | allorad keys add ${wallet_name} --recover)
+  fi
+
+  echo "$wallet_info"
+}
+
+# 安装 Allorad
+install_allorad() {
+  if ! check_command allorad; then
+    print_message "正在安装 Allorad..."
+    git clone https://github.com/allora-network/allora-chain.git
+    cd allora-chain
+    make all
+    cd ..
+  fi
+}
+
 # 设置单个实例
 setup_instance() {
   local instance_number=$1
@@ -239,6 +266,7 @@ main() {
   install_dependencies
   install_docker
   install_docker_compose
+  install_allorad
 
   read -p "请输入要运行的实例数量: " num_instances
 
