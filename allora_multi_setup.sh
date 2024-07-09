@@ -19,6 +19,9 @@ print_error() {
   echo -e "${RED}$1${NC}"
 }
 
+print_error "如果您对本工具有任何疑问，欢迎到 https://t.me/brotherblockchaingroup交流。"
+print_error "========================================================================"
+
 # 检查命令是否存在
 check_command() {
   if ! command -v $1 &>/dev/null; then
@@ -57,13 +60,26 @@ install_docker_compose() {
   fi
 }
 
+# Install Go
+install_go() {
+  if ! check_command go; then
+    print_message "正在安装 Go..."
+    sudo rm -rf /usr/local/go
+    curl -L https://go.dev/dl/go1.22.4.linux-amd64.tar.gz | sudo tar -xzf - -C /usr/local
+    echo 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin' >> $HOME/.bash_profile
+    echo 'export PATH=$PATH:$(go env GOPATH)/bin' >> $HOME/.bash_profile
+    source .bash_profile
+    go version
+  fi
+}
+
 # 创建 docker-compose.yml
 create_docker_compose() {
   local instance_number=$1
   local wallet_seed=$2
+  local head_id=$3
   local port_offset=$((instance_number * 10))
   local subnet="172.22.${instance_number}.0/24"
-  local head_id=$(cat allora-instances/instance-${instance_number}/head-data/keys/identity)
 
   cat >$HOME/allora-instances/instance-${instance_number}/docker-compose.yml <<EOL
 version: '3'
@@ -192,32 +208,36 @@ volumes:
 EOL
 }
 
-# 生成或恢复钱包
-generate_or_recover_wallet() {
-  local wallet_name=$1
-  local wallet_seed=$2
-
-  if [ -z "$wallet_seed" ]; then
-    # 创建新钱包
-    wallet_info=$(allorad keys add ${wallet_name})
-  else
-    # 使用助记词恢复钱包
-    wallet_info=$(echo "$wallet_seed" | allorad keys add ${wallet_name} --recover)
-  fi
-
-  echo "$wallet_info"
-}
-
 # 安装 Allorad
 install_allorad() {
   if ! check_command allorad; then
     print_message "正在安装 Allorad..."
+    rm -rf allora-chain
     git clone https://github.com/allora-network/allora-chain.git
     cd allora-chain
     make all
     cd ..
   fi
 }
+
+# 创建新钱包或通过助记词恢复
+wallet_setup() {
+  local wallet_name=$1
+  local wallet_seed=$2
+
+  echo "选择要执行的操作: "
+  echo "1. 使用已经存在的钱包"
+  echo "2. 创建一个新钱包"
+  read -p "请输入选项 1 or 2: " option
+
+  if [ "$option" == "1" ]; then
+    read -p "输入您的钱包助记词: " wallet_seed
+    allorad keys add testkey --recover <<< "$wallet_seed"
+  else
+    allorad keys add testkey
+  fi
+}
+
 
 # 设置单个实例
 setup_instance() {
@@ -241,8 +261,10 @@ setup_instance() {
   sudo docker run -it --entrypoint=bash -v ./head-data:/data alloranetwork/allora-inference-base:latest -c "mkdir -p /data/keys && (cd /data/keys && allora-keys)"
   sudo docker run -it --entrypoint=bash -v ./worker-data:/data alloranetwork/allora-inference-base:latest -c "mkdir -p /data/keys && (cd /data/keys && allora-keys)"
 
+  head_id=$(cat head-data/keys/identity)
+
   # 创建 docker-compose.yml
-  create_docker_compose $instance_number "$wallet_seed"
+  create_docker_compose "$instance_number" "$wallet_seed" "$head_id"
 
   # 返回到主目录
   cd ../..
@@ -264,6 +286,7 @@ main() {
   print_message "开始安装多实例 Allora Network Price Prediction Worker..."
 
   install_dependencies
+  install_go
   install_docker
   install_docker_compose
   install_allorad
@@ -271,6 +294,7 @@ main() {
   read -p "请输入要运行的实例数量: " num_instances
 
   for ((i = 1; i <= num_instances; i++)); do
+    wallet_setup
     read -p "请输入实例 #${i} 的钱包助记词: " wallet_seed
     setup_instance $i "$wallet_seed"
   done
