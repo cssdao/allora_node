@@ -148,7 +148,7 @@ services:
           --runtime-path=/app/runtime --runtime-cli=bls-runtime --workspace=/data/workspace \
           --private-key=/data/keys/priv.bin --log-level=debug --port=$((9011 + port_offset)) \
           --boot-nodes=/ip4/${subnet%.*}.100/tcp/$((9010 + port_offset))/p2p/${head_id} \
-          --topic=1 \
+          --topic=allora-topic-1-worker \
           --allora-chain-key-name=testkey-${instance_number} \
           --allora-chain-restore-mnemonic='${wallet_seed}' \
           --allora-node-rpc-address=https://allora-rpc.edgenet.allora.network/ \
@@ -267,7 +267,7 @@ setup_instance() {
   create_docker_compose "$instance_number" "$wallet_seed" "$head_id"
 
   # 返回到主目录
-  cd ../..
+  cd /root
 }
 
 # 运行实例
@@ -275,10 +275,10 @@ run_instance() {
   local instance_number=$1
 
   print_message "正在运行实例 #${instance_number}..."
-  cd allora-instances/instance-${instance_number}
+  cd /root/allora-instances/instance-${instance_number}
   docker-compose build
   docker-compose up -d
-  cd ../..
+  cd /root
 }
 
 # 主函数
