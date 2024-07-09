@@ -49,7 +49,7 @@ chmod +x allora_multi_setup.sh
 1. 输入想要运行的节点实例数量
 2. 为每个实例提供一个钱包助记词（每个实例需要不同的助记词）
 
-> 提示：请先到https://faucet.edgenet.allora.network/ 去领水，如果失败多试几次，一个ip 一天只能领一次，确认地址有测试币之后再去执行下面的操作。
+> 提示：请先到 https://faucet.edgenet.allora.network/ 去领水，如果失败多试几次，一个 ip 一天只能领一次，确认地址有测试币之后再去执行下面的操作。
 
 ### 6. 等待安装完成
 
