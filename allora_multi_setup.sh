@@ -280,6 +280,18 @@ run_instance() {
   cd ../..
 }
 
+# 查找当前最大的容器编号
+query_container_num() {
+  MAX_CONTAINER_NUM=$(docker ps -a --format '{{.Names}}' | grep '^worker-eth-pred-[0-9]*$' | sed 's/worker-eth-pred-//' | sort -n | tail -n 1)
+  # 如果没有找到容器，从1开始；否则从下一个数字开始
+  if [ -z "$MAX_CONTAINER_NUM" ]; then
+      START_NUM=1
+  else
+      START_NUM=$((MAX_CONTAINER_NUM + 1))
+  fi
+}
+
+
 # 主函数
 main() {
   print_message "开始安装多实例 Allora Network Price Prediction Worker..."
@@ -289,18 +301,21 @@ main() {
   install_docker
   install_docker_compose
   install_allorad
+  query_container_num
 
   read -p "请输入要运行的实例数量: " num_instances
 
-  for ((i = 1; i <= num_instances; i++)); do
-    echo "创建钱包${i}"
+  for ((i = 0; i < num_instances; i++)); do
+    instance_num=$((START_NUM + i))
+    echo "创建钱包${instance_num}"
     wallet_setup
-    read -p "请输入实例 #${i} 的钱包助记词: " wallet_seed
-    setup_instance $i "$wallet_seed"
+    read -p "请输入实例 #${instance_num} 的钱包助记词: " wallet_seed
+    setup_instance $instance_num "$wallet_seed"
   done
 
-  for ((i = 1; i <= num_instances; i++)); do
-    run_instance $i
+  for ((i = 0; i < num_instances; i++)); do
+    instance_num=$((START_NUM + i))
+    run_instance $instance_num
   done
 
   print_message "所有实例安装完成！"
@@ -308,9 +323,10 @@ main() {
   docker ps
 
   print_message "你可以使用以下命令检查各个节点的状态："
-  for ((i = 1; i <= num_instances; i++)); do
+  for ((i = 0; i < num_instances; i++)); do
+    instance_num=$((START_NUM + i))
     port_offset=$((i * 10))
-    echo "实例 #${i}:"
+    echo "实例 #${instance_num}:"
     echo "检查 Worker 节点: curl --location 'http://localhost:$((6000 + port_offset))/api/v1/functions/execute' ..."
     echo "检查 Updater 节点: curl http://localhost:$((8000 + port_offset))/update"
     echo "检查 Inference 节点: curl http://localhost:$((8000 + port_offset))/inference/ETH"
