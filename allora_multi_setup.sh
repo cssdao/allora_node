@@ -225,7 +225,6 @@ wallet_setup() {
   local wallet_name=$1
   local wallet_seed=$2
 
-  echo "选择要执行的操作: "
   echo "1. 使用已经存在的钱包"
   echo "2. 创建一个新钱包"
   read -p "请输入选项 1 or 2: " option
@@ -267,7 +266,7 @@ setup_instance() {
   create_docker_compose "$instance_number" "$wallet_seed" "$head_id"
 
   # 返回到主目录
-  cd /root
+  cd ../..
 }
 
 # 运行实例
@@ -275,10 +274,10 @@ run_instance() {
   local instance_number=$1
 
   print_message "正在运行实例 #${instance_number}..."
-  cd /root/allora-instances/instance-${instance_number}
+  cd allora-instances/instance-${instance_number}
   docker-compose build
   docker-compose up -d
-  cd /root
+  cd ../..
 }
 
 # 主函数
@@ -294,6 +293,7 @@ main() {
   read -p "请输入要运行的实例数量: " num_instances
 
   for ((i = 1; i <= num_instances; i++)); do
+    echo "创建钱包${i}"
     wallet_setup
     read -p "请输入实例 #${i} 的钱包助记词: " wallet_seed
     setup_instance $i "$wallet_seed"
